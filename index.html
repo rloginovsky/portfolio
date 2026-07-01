@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Roman Loginovsky</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Joan&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red: #c8201a;
+  --bg: #0c0c0c;
+  --bg2: #141414;
+  --border: #1e1e1e;
+  --text: #e8e4db;
+  --muted: #555;
+  --radius: 8px;
+  --gap: 6px;
+}
+
+html { background: var(--bg); color: var(--text); font-family: 'DM Sans', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; }
+
+body { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* HEADER */
+.site-header { margin-bottom: 56px; }
+.site-name { font-family: 'Joan', Georgia, serif; font-size: clamp(28px, 5vw, 44px); font-weight: 400; color: var(--text); letter-spacing: -0.01em; margin-bottom: 4px; }
+.site-role { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+/* SECTIONS */
+.section { margin-bottom: 56px; }
+.section-header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.section-title { font-family: 'Joan', Georgia, serif; font-size: 17px; font-weight: 400; color: var(--text); letter-spacing: 0.01em; }
+.section-count { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+
+/* GRID — row with auto-fit heights */
+.project-row {
+  display: flex;
+  gap: var(--gap);
+  align-items: stretch;
+  margin-bottom: var(--gap);
+}
+
+.project-row.singles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--gap); }
+
+/* CARD */
+.card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--bg2);
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+}
+
+/* Aspect ratio helpers — applied when the card is ALONE in its flex context */
+.card.ar-16-9  { aspect-ratio: 16 / 9; }
+.card.ar-9-16  { aspect-ratio: 9 / 16; flex: 0 0 auto; width: 180px; }
+.card.ar-1-1   { aspect-ratio: 1 / 1; }
+.card.ar-4-3   { aspect-ratio: 4 / 3; }
+
+/* When multiple cards share a row the parent sets height via the tallest item */
+.project-row:not(.singles) { align-items: stretch; }
+.project-row:not(.singles) .card { flex: 1; }
+.project-row:not(.singles) .card.ar-9-16 { flex: 0 0 auto; width: 180px; }
+
+/* VIDEO / THUMBNAIL inside card */
+.card-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-media-wrap {
+  position: absolute;
+  inset: 0;
+}
+.card-media-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  pointer-events: none;
+}
+
+/* Thumb fallback */
+.card-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease, opacity 0.3s ease;
+}
+
+.card:hover .card-thumb { transform: scale(1.04); opacity: 0.7; }
+
+/* Overlay */
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px;
+  background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 55%);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  pointer-events: none;
+}
+.card:hover .card-overlay { opacity: 1; }
+
+.card-tag { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); margin-bottom: 3px; }
+.card-title { font-family: 'Joan', Georgia, serif; font-size: 15px; font-weight: 400; color: var(--text); line-height: 1.2; }
+
+/* Always-visible label for small/portrait cards */
+.card.ar-9-16 .card-overlay { opacity: 0.85; }
+
+/* MODAL */
+.modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.96);
+  z-index: 2000;
+  overflow-y: auto;
+  padding: 24px 16px;
+}
+.modal-bg.open { display: flex; align-items: flex-start; justify-content: center; }
+
+.modal {
+  background: #111;
+  width: 100%;
+  max-width: 700px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: auto;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  color: #888;
+  font-size: 16px;
+  line-height: 1;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.2s;
+}
+.modal-close:hover { color: var(--text); }
+
+.modal-media { width: 100%; background: #000; }
+.modal-media.r16-9 { aspect-ratio: 16/9; }
+.modal-media.r9-16 { aspect-ratio: 9/16; max-height: 520px; }
+.modal-media iframe { width: 100%; height: 100%; border: none; display: block; }
+.modal-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.modal-yt-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #000;
+  padding: 24px;
+}
+.modal-yt-thumb { width: 100%; max-width: 380px; border-radius: 6px; opacity: 0.55; }
+.modal-yt-link {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--red);
+  text-decoration: none;
+  border: 1px solid var(--red);
+  padding: 8px 18px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.modal-yt-link:hover { background: rgba(200,32,26,0.12); }
+
+.modal-body { padding: 26px; }
+.modal-tag { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); margin-bottom: 6px; }
+.modal-title { font-family: 'Joan', Georgia, serif; font-size: 26px; font-weight: 400; color: var(--text); line-height: 1.15; margin-bottom: 14px; }
+.modal-roles { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px; }
+.role-badge { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid #222; color: #666; padding: 4px 10px; border-radius: 4px; }
+.modal-text { font-size: 14px; line-height: 1.78; color: #999; }
+.modal-text + .modal-text { margin-top: 14px; }
+
+/* GALLERY inside modal */
+.modal-gallery { margin: 22px 0; }
+.gallery-label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: #333; margin-bottom: 10px; }
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  align-items: start;
+}
+.gallery-grid img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 5px;
+  filter: brightness(0.78);
+  transition: filter 0.2s;
+  cursor: pointer;
+}
+.gallery-grid img:hover { filter: brightness(1); }
+.gallery-grid img.g-tall    { aspect-ratio: 2/3; }
+.gallery-grid img.g-wide    { aspect-ratio: 4/3; }
+.gallery-grid img.g-sq      { aspect-ratio: 1/1; }
+.gallery-grid img.g-span2   { grid-column: span 2; aspect-ratio: 16/9; }
+.gallery-grid img.g-portrait { aspect-ratio: 9/16; }
+
+/* FOOTER */
+.site-footer {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer-cta { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #2e2e2e; }
+.footer-links { display: flex; gap: 22px; }
+.footer-links a { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #444; text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--red); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-name">Roman Loginovsky</div>
+  <div class="site-role">Creative Director · DoP · Filmmaker</div>
+</header>
+
+<!-- ───────────────────────── AI FILMMAKING ───────────────────────── -->
+<section class="section" id="ai-filmmaking">
+  <div class="section-header">
+    <span class="section-title">AI filmmaking</span>
+    <span class="section-count">4 projects</span>
+  </div>
+
+  <!-- Row: two landscape + one portrait -->
+  <div class="project-row">
+    <div class="card ar-16-9" onclick="openModal('ai-1')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/p6PNyBiCva4/maxresdefault.jpg" alt="AI Filmmaking Essay" />
+      <div class="card-overlay">
+        <div class="card-tag">YouTube Essay</div>
+        <div class="card-title">AI Filmmaking Workflow</div>
+      </div>
+    </div>
+    <div class="card ar-9-16" onclick="openModal('ai-2')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/OJ0aAwkAISI/maxresdefault.jpg" alt="AI Short" />
+      <div class="card-overlay">
+        <div class="card-tag">AI Short · 9:16</div>
+        <div class="card-title">AI Short</div>
+      </div>
+    </div>
+    <div class="card ar-16-9" onclick="openModal('ai-3')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/oh_rrD4tx_M/maxresdefault.jpg" alt="AI Essay 2" />
+      <div class="card-overlay">
+        <div class="card-tag">Essay</div>
+        <div class="card-title">Project Title</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── TRADITIONAL PRODUCTION ───────────────────────── -->
+<section class="section" id="traditional">
+  <div class="section-header">
+    <span class="section-title">Traditional production</span>
+    <span class="section-count">1 project</span>
+  </div>
+
+  <div class="project-row">
+    <div class="card ar-16-9" onclick="openModal('trad-1')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/VgoudnL7K4Q/maxresdefault.jpg" alt="Showreel" />
+      <div class="card-overlay">
+        <div class="card-tag">Showreel</div>
+        <div class="card-title">Roman Loginovsky — Showreel</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── MUSIC VIDEOS ───────────────────────── -->
+<section class="section" id="music-videos">
+  <div class="section-header">
+    <span class="section-title">Music videos</span>
+    <span class="section-count">4 projects</span>
+  </div>
+
+  <div class="project-row">
+    <div class="card ar-16-9" onclick="openModal('mv-1')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/DRh_oq6lGZE/maxresdefault.jpg" alt="Music video 1" />
+      <div class="card-overlay">
+        <div class="card-tag">Cinematography</div>
+        <div class="card-title">Dmitur — Тая МРЕТО НЕ ТЕЧ</div>
+      </div>
+    </div>
+    <div class="card ar-16-9" onclick="openModal('mv-2')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/VgoudnL7K4Q/maxresdefault.jpg" alt="Music video 2" />
+      <div class="card-overlay">
+        <div class="card-tag">DoP · Director</div>
+        <div class="card-title">Na a cafe — ocean</div>
+      </div>
+    </div>
+    <div class="card ar-16-9" onclick="openModal('mv-3')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/3899cPGAm1g/maxresdefault.jpg" alt="Pikes Junior Woman" />
+      <div class="card-overlay">
+        <div class="card-tag">DoP</div>
+        <div class="card-title">Pikes Junior — Woman</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="project-row">
+    <div class="card ar-16-9" onclick="openModal('mv-4')">
+      <img class="card-thumb" src="https://i.imgur.com/IFAIjRg.jpg" alt="Dmitur live" />
+      <div class="card-overlay">
+        <div class="card-tag">Cinematography</div>
+        <div class="card-title">Dmitur — Девочка на мару</div>
+      </div>
+    </div>
+    <div class="card ar-16-9" onclick="openModal('mv-5')">
+      <img class="card-thumb" src="https://i.imgur.com/YJDDcmX.jpg" alt="Music video 5" />
+      <div class="card-overlay">
+        <div class="card-tag">DoP</div>
+        <div class="card-title">Айкомы дрема (official)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── ADS ───────────────────────── -->
+<section class="section" id="ads">
+  <div class="section-header">
+    <span class="section-title">Ads</span>
+    <span class="section-count">3 projects</span>
+  </div>
+
+  <div class="project-row singles">
+    <div class="card ar-16-9" onclick="openModal('ad-1')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/p6PNyBiCva4/maxresdefault.jpg" alt="Bad Santa" />
+      <div class="card-overlay">
+        <div class="card-tag">Instagram Ad</div>
+        <div class="card-title">Bad Santa</div>
+      </div>
+    </div>
+    <div class="card ar-16-9" onclick="openModal('ad-2')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/oh_rrD4tx_M/maxresdefault.jpg" alt="Military Backpack" />
+      <div class="card-overlay">
+        <div class="card-tag">Facebook Ad</div>
+        <div class="card-title">Military Backpack</div>
+      </div>
+    </div>
+    <div class="card ar-16-9" onclick="openModal('ad-3')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/OJ0aAwkAISI/maxresdefault.jpg" alt="Soundfall Promo" />
+      <div class="card-overlay">
+        <div class="card-tag">Custom Ad</div>
+        <div class="card-title">Soundfall Promo</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── HOSTING · PRESENTING ───────────────────────── -->
+<section class="section" id="hosting">
+  <div class="section-header">
+    <span class="section-title">Hosting · Presenting · Remote production</span>
+    <span class="section-count">4 projects</span>
+  </div>
+
+  <div class="project-row">
+    <div class="card ar-16-9" onclick="openModal('host-1')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/VgoudnL7K4Q/maxresdefault.jpg" alt="Klondike" />
+      <div class="card-overlay">
+        <div class="card-tag">Hosting</div>
+        <div class="card-title">Kate & Paul Have a Chat! Klondike Worlds Collab</div>
+      </div>
+    </div>
+    <div class="card ar-16-9" onclick="openModal('host-2')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/3899cPGAm1g/maxresdefault.jpg" alt="Klondike 2" />
+      <div class="card-overlay">
+        <div class="card-tag">Remote Production</div>
+        <div class="card-title">You Asked, We Answered — Klondike Adventures</div>
+      </div>
+    </div>
+  </div>
+  <div class="project-row">
+    <div class="card ar-16-9" onclick="openModal('host-3')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/DRh_oq6lGZE/maxresdefault.jpg" alt="Bram" />
+      <div class="card-overlay">
+        <div class="card-tag">Presenter</div>
+        <div class="card-title">Bram Highlights in CRSED:FOAD</div>
+      </div>
+    </div>
+    <div class="card ar-16-9" onclick="openModal('host-4')">
+      <img class="card-thumb" src="https://img.youtube.com/vi/p6PNyBiCva4/maxresdefault.jpg" alt="Learning Docking" />
+      <div class="card-overlay">
+        <div class="card-tag">Remote Production</div>
+        <div class="card-title">Learning Docking Again in CRSED</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-cta">Let's collaborate</div>
+  <div class="footer-links">
+    <a href="https://instagram.com" target="_blank">Instagram</a>
+    <a href="https://t.me" target="_blank">Telegram</a>
+    <a href="mailto:roman@example.com">Email</a>
+  </div>
+</footer>
+
+<!-- ───────────────────────── MODAL ───────────────────────── -->
+<div class="modal-bg" id="modal-bg" onclick="closeOnBg(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-media" id="modal-media"></div>
+    <div class="modal-body">
+      <div class="modal-tag" id="modal-tag"></div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-roles" id="modal-roles"></div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const YT = id => `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+
+const PROJECTS = {
+  'ai-1': {
+    tag: 'AI Filmmaking · YouTube Essay',
+    title: 'AI filmmaking workflow',
+    roles: ['Writer', 'Director', 'Editor', 'AI Director'],
+    ratio: 'r16-9',
+    media: { type: 'youtube', id: 'p6PNyBiCva4' },
+    content: [
+      { type: 'text', v: 'A YouTube essay exploring how AI tools integrate into a practical filmmaking pipeline — fal.ai, image-to-video generation, and the creative decisions behind using generative tools without losing authorship. The argument is that the pipeline matters less than the intent behind it.' },
+      { type: 'gallery', label: 'Process & stills', images: [
+        { src: YT('VgoudnL7K4Q'), cls: 'g-span2' },
+        { src: YT('3899cPGAm1g'), cls: 'g-tall' },
+        { src: YT('DRh_oq6lGZE'), cls: 'g-wide' },
+        { src: YT('oh_rrD4tx_M'), cls: 'g-sq' },
+        { src: YT('OJ0aAwkAISI'), cls: 'g-wide' },
+      ]},
+      { type: 'text', v: 'Tools used: fal.ai, Runway, DaVinci Resolve. Shot with Sony a6300 for the talking head segments. The AI sequences were generated from still photography I shot myself, maintaining visual continuity between real and synthetic footage.' },
+    ]
+  },
+  'ai-2': {
+    tag: 'AI Short · 9:16',
+    title: 'AI short — title TBD',
+    roles: ['Director', 'AI Director', 'Editor'],
+    ratio: 'r9-16',
+    media: { type: 'youtube', id: 'OJ0aAwkAISI' },
+    content: [
+      { type: 'text', v: 'Vertical format AI short. Description to be added once the project is locked. Placeholder for now — role breakdown, tools, and approach will go here.' },
+    ]
+  },
+  'ai-3': {
+    tag: 'AI Essay',
+    title: 'Project title',
+    roles: ['Writer', 'Director', 'Editor'],
+    ratio: 'r16-9',
+    media: { type: 'youtube', id: 'oh_rrD4tx_M' },
+    content: [
+      { type: 'text', v: 'Replace with essay topic, argument, and approach. What drove you to make it? What visual language did you choose and why?' },
+    ]
+  },
+  'trad-1': {
+    tag: 'Showreel · 2023',
+    title: 'Roman Loginovsky — Showreel',
+    roles: ['Director of Photography', 'Colorist', 'Editor'],
+    ratio: 'r16-9',
+    media: { type: 'youtube', id: 'VgoudnL7K4Q' },
+    content: [
+      { type: 'text', v: 'A selection of cinematography work across music videos, short films, and commercial projects. Shot primarily on Sony a6300 and Panasonic S5 II. Graded in DaVinci Resolve.' },
+      { type: 'gallery', label: 'Selected frames', images: [
+        { src: YT('3899cPGAm1g'), cls: 'g-wide' },
+        { src: YT('DRh_oq6lGZE'), cls: 'g-wide' },
+        { src: YT('OJ0aAwkAISI'), cls: 'g-wide' },
+      ]},
+    ]
+  },
+  'mv-1': {
+    tag: 'Music Video · Cinematography',
+    title: 'Dmitur — Тая МРЕТО НЕ ТЕЧ',
+    roles: ['Director of Photography', 'Camera Operator'],
+    ratio: 'r16-9',
+    media: { type: 'youtube', id: 'DRh_oq6lGZE' },
+    content: [
+      { type: 'text', v: 'Music video for Dmitur. Describe the brief, locations, lighting approach, and how the visual language supports the track.' },
+      { type: 'gallery', label: 'Behind the scenes', images: [
+        { src: YT('VgoudnL7K4Q'), cls: 'g-sq' },
+        { src: YT('oh_rrD4tx_M'), cls: 'g-sq' },
+        { src: YT('p6PNyBiCva4'), cls: 'g-sq' },
+      ]},
+      { type: 'text', v: 'Camera: Sony a6300. Lens: 35mm f/1.8. Graded in DaVinci Resolve.' },
+    ]
+  },
+  'mv-2': {
+    tag: 'Music Video · DoP · Director',
+    title: 'Na a cafe — ocean',
+    roles: ['Director', 'Director of Photography', 'Colorist'],
+    ratio: 'r16-9',
+    media: { type: 'vimeo', src: 'https://player.vimeo.com/video/692500395?byline=0&portrait=0&title=0' },
+    content: [
+      { type: 'text', v: 'Shot on location. The brief called for something cold and static — we pushed toward intimate stillness instead, letting the singer\'s performance carry the frame.' },
+    ]
+  },
+  'mv-3': {
+    tag: 'Music Video · DoP',
+    title: 'Pikes Junior — Woman',
+    roles: ['Director of Photography', 'Gaffer'],
+    ratio: 'r16-9',
+    media: { type: 'youtube', id: '3899cPGAm1g' },
+    content: [
+      { type: 'text', v: 'Warm, saturated palette built around controlled practicals and a single tungsten key. Describe collaboration with the director and key lighting decisions.' },
+    ]
+  },
+  'mv-4': {
+    tag: 'Cinematography',
+    title: 'Dmitur — Девочка на мару',
+    roles: ['Director of Photography'],
+    ratio: 'r16-9',
+    media: { type: 'thumb', src: 'https://i.imgur.com/IFAIjRg.jpg' },
+    content: [
+      { type: 'text', v: 'Replace with description.' },
+    ]
+  },
+  'mv-5': {
+    tag: 'DoP',
+    title: 'Айкомы дрема (official)',
+    roles: ['Director of Photography'],
+    ratio: 'r16-9',
+    media: { type: 'thumb', src: 'https://i.imgur.com/YJDDcmX.jpg' },
+    content: [
+      { type: 'text', v: 'Replace with description.' },
+    ]
+  },
+  'ad-1': { tag: 'Instagram Ad', title: 'Bad Santa', roles: ['Director', 'DoP'], ratio: 'r16-9', media: { type: 'youtube', id: 'p6PNyBiCva4' }, content: [{ type: 'text', v: 'Replace with description.' }] },
+  'ad-2': { tag: 'Facebook Ad', title: 'Military Backpack', roles: ['Director', 'DoP'], ratio: 'r16-9', media: { type: 'youtube', id: 'oh_rrD4tx_M' }, content: [{ type: 'text', v: 'Replace with description.' }] },
+  'ad-3': { tag: 'Custom Ad', title: 'Soundfall Promo', roles: ['Director', 'DoP'], ratio: 'r16-9', media: { type: 'youtube', id: 'OJ0aAwkAISI' }, content: [{ type: 'text', v: 'Replace with description.' }] },
+  'host-1': { tag: 'Hosting', title: 'Kate & Paul Have a Chat! Klondike Worlds Collab', roles: ['Host', 'Remote Production'], ratio: 'r16-9', media: { type: 'youtube', id: 'VgoudnL7K4Q' }, content: [{ type: 'text', v: 'Replace with description.' }] },
+  'host-2': { tag: 'Remote Production', title: 'You Asked, We Answered — Klondike Adventures', roles: ['Host', 'Editor'], ratio: 'r16-9', media: { type: 'youtube', id: '3899cPGAm1g' }, content: [{ type: 'text', v: 'Replace with description.' }] },
+  'host-3': { tag: 'Presenter', title: 'Bram Highlights in CRSED:FOAD', roles: ['Presenter', 'Editor'], ratio: 'r16-9', media: { type: 'youtube', id: 'DRh_oq6lGZE' }, content: [{ type: 'text', v: 'Replace with description.' }] },
+  'host-4': { tag: 'Remote Production', title: 'Learning Docking Again in CRSED', roles: ['Presenter', 'Remote Director'], ratio: 'r16-9', media: { type: 'youtube', id: 'p6PNyBiCva4' }, content: [{ type: 'text', v: 'Replace with description.' }] },
+};
+
+function buildMedia(p) {
+  const el = document.getElementById('modal-media');
+  el.className = 'modal-media ' + p.ratio;
+  const m = p.media;
+  if (m.type === 'vimeo') {
+    el.innerHTML = `<iframe src="${m.src}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+  } else if (m.type === 'youtube') {
+    el.innerHTML = `<div class="modal-yt-fallback">
+      <img class="modal-yt-thumb" src="https://img.youtube.com/vi/${m.id}/maxresdefault.jpg" alt="thumbnail" />
+      <a class="modal-yt-link" href="https://youtu.be/${m.id}" target="_blank">▶ Watch on YouTube</a>
+    </div>`;
+  } else {
+    el.innerHTML = `<img src="${m.src}" alt="${p.title}" />`;
+  }
+}
+
+function buildContent(content) {
+  return content.map(b => {
+    if (b.type === 'text') return `<div class="modal-text">${b.v}</div>`;
+    if (b.type === 'gallery') {
+      const imgs = b.images.map(i => `<img src="${i.src}" class="${i.cls}" alt="behind the scenes" />`).join('');
+      return `<div class="modal-gallery">
+        <div class="gallery-label">${b.label}</div>
+        <div class="gallery-grid">${imgs}</div>
+      </div>`;
+    }
+    return '';
+  }).join('');
+}
+
+function openModal(id) {
+  const p = PROJECTS[id];
+  if (!p) return;
+  buildMedia(p);
+  document.getElementById('modal-tag').textContent = p.tag;
+  document.getElementById('modal-title').textContent = p.title;
+  document.getElementById('modal-roles').innerHTML = p.roles.map(r => `<span class="role-badge">${r}</span>`).join('');
+  document.getElementById('modal-content').innerHTML = buildContent(p.content);
+  document.getElementById('modal-bg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+  document.getElementById('modal-media').innerHTML = '';
+  document.body.style.overflow = '';
+}
+
+function closeOnBg(e) {
+  if (e.target === document.getElementById('modal-bg')) closeModal();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ── AUTOPLAY on hover via YouTube nocookie embed ── */
+document.querySelectorAll('.card').forEach(card => {
+  const thumb = card.querySelector('.card-thumb');
+  if (!thumb) return;
+
+  const ytSrc = thumb.src.match(/youtube\.com\/vi\/([^/]+)\//);
+  if (!ytSrc) return;
+  const ytId = ytSrc[1];
+
+  let iframe = null;
+
+  card.addEventListener('mouseenter', () => {
+    if (iframe) return;
+    iframe = document.createElement('div');
+    iframe.className = 'card-media-wrap';
+    iframe.innerHTML = `<iframe
+      src="https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&showinfo=0"
+      allow="autoplay; encrypted-media"
+      allowfullscreen
+    ></iframe>`;
+    card.insertBefore(iframe, card.firstChild);
+    thumb.style.opacity = '0';
+  });
+
+  card.addEventListener('mouseleave', () => {
+    if (iframe) { iframe.remove(); iframe = null; }
+    thumb.style.opacity = '1';
+  });
+});
+</script>
+</body>
+</html>
